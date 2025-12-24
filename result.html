@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>結果頁｜園藝丙級術科識別線上模擬測驗</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<header>
+  <div class="container">
+    <h1>結果頁</h1>
+    <div class="muted">
+      本網站圖片僅供教育與非營利用途，著作權歸原權利人所有，嚴禁未經授權之商業使用。
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="card">
+    <div style="font-size:18px;font-weight:800;">姓名/代號：<span id="rName"></span></div>
+    <div style="font-size:22px;font-weight:900;margin-top:6px;">分數：<span id="rScore"></span> / 100</div>
+
+    <hr/>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:70px;">題號</th>
+          <th>你的答案</th>
+          <th>正確答案</th>
+          <th style="width:80px;">對錯</th>
+        </tr>
+      </thead>
+      <tbody id="rTable"></tbody>
+    </table>
+
+    <div class="navRow">
+      <button class="secondary" id="retryBtn">再測一次</button>
+      <button id="backHomeBtn">回首頁</button>
+    </div>
+  </div>
+</main>
+
+<script src="./result.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>作答中｜園藝丙級術科識別線上模擬測驗</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<header>
+  <div class="container">
+    <h1>作答頁</h1>
+    <div class="muted">40 分鐘倒數，做完可以交卷；也會在時間到時自動交卷。</div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="card">
+    <div class="quizTop">
+      <div class="progress">第 <span id="qIndex">1</span> / 100 題</div>
+      <div class="timer">剩餘時間：<span id="timeLeft">40:00</span></div>
+    </div>
+
+    <div class="imgBox">
+      <img id="qImg" alt="題目圖片" />
+    </div>
+
+    <div class="options" id="options"></div>
+
+    <div class="navRow">
+      <button class="secondary" id="prevBtn">上一題</button>
+      <div class="row">
+        <button class="secondary" id="saveExitBtn">儲存並離開</button>
+        <button id="submitBtn">交卷</button>
+      </div>
+      <button class="secondary" id="nextBtn">下一題</button>
+    </div>
+
+    <div class="footerNote">
+      規則：每題 1 個正確選項 + 3 個錯誤選項。錯誤選項必須來自「不同中文名稱」的圖片。
+    </div>
+  </div>
+</main>
+
+<script src="./quiz.js"></script>
+</body>
+</html>

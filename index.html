@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>園藝丙級術科識別線上模擬測驗</title>
+  <meta name="keywords" content="園藝丙級,術科,模擬測驗,識別" />
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<header>
+  <div class="container">
+    <h1>園藝丙級術科識別線上模擬測驗</h1>
+    <div class="muted">
+      資料來源：勞動部勞動力發展署技能檢定中心。<br/>
+      本網站圖片僅供教育與非營利用途，著作權歸原權利人所有，嚴禁未經授權之商業使用。
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <div class="card">
+    <div class="row">
+      <label>
+        <div class="badge">請輸入姓名或代號</div><br/>
+        <input id="playerName" type="text" placeholder="例如：小明 / A01" />
+      </label>
+
+      <div>
+        <div class="badge">目前累計測驗人數達</div>
+        <div style="font-size:22px;font-weight:800;margin-top:6px;">
+          <span id="totalPlayers">0</span> 人
+        </div>
+      </div>
+    </div>
+
+    <hr/>
+
+    <div class="muted">
+      本試題由電腦亂數抽題產生，總共 100 題（每題 1 分，總分 100 分），單選題，可前後翻題。<br/>
+      測試時間：40 分鐘。<br/>
+      抽題比例：果樹20 / 蔬果20 / 水生4 / 蔓性6 / 草本20 / 灌木10 / 喬木10 / 資材10
+    </div>
+
+    <div style="margin-top:14px;">
+      <button id="startBtn">開始測驗</button>
+    </div>
+
+    <div class="footerNote">
+      小提醒：你可以先用「假資料題庫」練習，之後再把 questions.json 換成真正的題庫。
+    </div>
+  </div>
+</main>
+
+<script src="./home.js"></script>
+</body>
+</html>
