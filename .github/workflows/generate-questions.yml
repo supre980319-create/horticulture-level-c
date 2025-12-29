@@ -1,0 +1,84 @@
+name: Generate questions.json from Cloudinary
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: |
+          npm init -y
+          npm install cloudinary
+
+      - name: Generate questions.json
+        env:
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
+        run: |
+          node - <<'NODE'
+          const fs = require("fs");
+          const cloudinary = require("cloudinary").v2;
+
+          cloudinary.config({
+            cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+            api_key: process.env.CLOUDINARY_API_KEY,
+            api_secret: process.env.CLOUDINARY_API_SECRET,
+            secure: true
+          });
+
+          function cleanName(publicId){
+            const base = publicId.split("/").pop();
+            return base.split("_")[0];
+          }
+
+          function getCategory(publicId){
+            const parts = publicId.split("/");
+            return parts.length > 1 ? parts[0] : "unknown";
+          }
+
+          async function fetchAll() {
+            let all = [];
+            let next_cursor = undefined;
+            do {
+              const r = await cloudinary.api.resources({
+                type: "upload",
+                max_results: 500,
+                next_cursor
+              });
+              all = all.concat(r.resources);
+              next_cursor = r.next_cursor;
+            } while (next_cursor);
+            return all;
+          }
+
+          (async () => {
+            const resources = await fetchAll();
+            const questions = resources.map((img) => ({
+              image: img.secure_url,
+              name: cleanName(img.public_id),
+              category: getCategory(img.public_id)
+            }));
+
+            fs.writeFileSync("questions.json", JSON.stringify(questions, null, 2), "utf8");
+            console.log("generated:", questions.length);
+          })().catch(e => { console.error(e); process.exit(1); });
+          NODE
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add questions.json
+          git commit -m "Auto-generate questions.json" || echo "No changes"
+          git push
