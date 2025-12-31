@@ -136,7 +136,7 @@
   }
 
   async function loadBank(){
-    const res = await fetch("./questions.json", {cache:"no-store"});
+    const res = await fetch("questions.json", {cache:"no-store"});
     if(!res.ok) throw new Error("Cannot load questions.json");
     const data = await res.json();
     if(!Array.isArray(data)) throw new Error("questions.json must be an array");
