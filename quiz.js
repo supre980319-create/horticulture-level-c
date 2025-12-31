@@ -136,7 +136,7 @@
   function render(session){
     const q = session.questions[session.currentIndex];
     qIndexEl.textContent = String(session.currentIndex+1);
-    imgEl.src = q.image;
+    imgEl.src = encodeURI(q.image);
     imgEl.onerror = ()=>{ imgEl.alt="圖片載入失敗（檢查 image URL）"; };
 
     optBox.innerHTML = "";
