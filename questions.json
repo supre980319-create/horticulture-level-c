@@ -469,11 +469,11 @@
     "name": "資材示例4",
     "category": "materials"
   },
-  {
-    "image": "https://res.cloudinary.com/dqmb8mzyi/image/upload/v1766906869/鐮刀_2_ne7akp.jpg",
-    "name": "鐮刀",
-    "category": "materials"
-  },
+ {
+  "image": "https://res.cloudinary.com/dqmb8mzyi/image/upload/v1766906869/鐮刀_2_ne7akp.jpg",
+  "name": "鐮刀",
+  "category": "materials"
+},
   {
     "image": "https://via.placeholder.com/800x500?text=materials%206",
     "name": "資材示例6",
