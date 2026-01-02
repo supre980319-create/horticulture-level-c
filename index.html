@@ -226,8 +226,10 @@ async function loadAllImages(){
 
   try{
     const db = await loadAllImages();
+    const data = db.folders;   // ← 新增這行
+
     // 簡單檢查：至少要有 A..H
-    const missing = ['A','B','C','D','E','F','G','H'].filter(k => !db[k]);
+    const missing = ['A','B','C','D','E','F','G','H'].filter(k => !data[k]);
     if(missing.length){
       status.className = 'warn';
       status.textContent = 'all_images.json 缺少類別：' + missing.join(', ');
@@ -242,8 +244,7 @@ async function loadAllImages(){
       localStorage.setItem(LS_KEYS.playerName, playerName);
 
       // 建題
-      const questions = buildQuestions(db);
-
+      const questions = buildQuestions(data);
       // 建立測驗狀態（40 分鐘）
       const now = Date.now();
       const quizState = {
