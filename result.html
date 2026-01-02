@@ -5,6 +5,22 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>結果頁｜園藝丙級術科識別線上模擬測驗</title>
   <link rel="stylesheet" href="./style.css" />
+  <style>
+    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans TC","Microsoft JhengHei",sans-serif;margin:0;background:#f6f7fb}
+    header{background:#111827;color:#fff;padding:20px 0}
+    .container{max-width:980px;margin:0 auto;padding:0 16px}
+    .card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.07);margin:18px 0}
+    .muted{opacity:.8;line-height:1.55}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
+    th,td{border-bottom:1px solid #e5e7eb;padding:10px 8px;text-align:left;vertical-align:top}
+    th{background:#f9fafb}
+    .ok{color:#047857;font-weight:900}
+    .bad{color:#b91c1c;font-weight:900}
+    .navRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+    button{padding:10px 14px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}
+    button.secondary{background:#e5e7eb;color:#111827}
+    .warn{color:#b45309;font-weight:900}
+  </style>
 </head>
 <body>
 <header>
@@ -18,6 +34,8 @@
 
 <main class="container">
   <div class="card">
+    <div id="warn" class="warn" style="display:none;"></div>
+
     <div style="font-size:18px;font-weight:800;">姓名/代號：<span id="rName"></span></div>
     <div style="font-size:22px;font-weight:900;margin-top:6px;">分數：<span id="rScore"></span> / 100</div>
 
@@ -42,6 +60,55 @@
   </div>
 </main>
 
-<script src="./result.js"></script>
+<script>
+function pretty(x){
+  if(!x) return '（未作答）';
+  return String(x).replaceAll('_',' / ');
+}
+(function init(){
+  const warn = document.getElementById('warn');
+  const raw = localStorage.getItem('result_v2');
+  if(!raw){
+    warn.style.display = 'block';
+    warn.textContent = '找不到結果資料（result_v2）。可能尚未交卷，請回首頁開始測驗。';
+    document.getElementById('rName').textContent = '—';
+    document.getElementById('rScore').textContent = '0';
+    return;
+  }
+
+  let result;
+  try{ result = JSON.parse(raw); }catch{
+    warn.style.display = 'block';
+    warn.textContent = '結果資料格式錯誤。';
+    return;
+  }
+
+  document.getElementById('rName').textContent = result.playerName || '匿名';
+  document.getElementById('rScore').textContent = String(result.score || 0);
+
+  const tbody = document.getElementById('rTable');
+  tbody.innerHTML = '';
+
+  (result.details || []).forEach(row => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.no}</td>
+      <td>${pretty(row.your)}</td>
+      <td>${pretty(row.correct)}</td>
+      <td class="${row.ok ? 'ok' : 'bad'}">${row.ok ? '✔' : '✘'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('retryBtn').addEventListener('click', () => {
+    // 清掉舊測驗狀態，回首頁重建
+    localStorage.removeItem('quizState_v2');
+    window.location.href = './index.html';
+  });
+  document.getElementById('backHomeBtn').addEventListener('click', () => {
+    window.location.href = './index.html';
+  });
+})();
+</script>
 </body>
 </html>

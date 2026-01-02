@@ -5,6 +5,29 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>作答中｜園藝丙級術科識別線上模擬測驗</title>
   <link rel="stylesheet" href="./style.css" />
+  <style>
+    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans TC","Microsoft JhengHei",sans-serif;margin:0;background:#f6f7fb}
+    header{background:#111827;color:#fff;padding:20px 0}
+    .container{max-width:980px;margin:0 auto;padding:0 16px}
+    .card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.07);margin:18px 0}
+    .muted{opacity:.8;line-height:1.55}
+    .quizTop{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .progress{font-weight:900}
+    .timer{font-weight:900}
+    .imgBox{margin:14px 0;background:#0b1220;border-radius:14px;display:flex;justify-content:center;align-items:center;overflow:hidden}
+    .imgBox img{max-width:100%;height:auto;display:block}
+    .options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+    @media (max-width:720px){.options{grid-template-columns:1fr}}
+    .optBtn{border:1px solid #d1d5db;border-radius:12px;padding:10px 12px;background:#fff;cursor:pointer;text-align:left;font-weight:800}
+    .optBtn.selected{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+    .navRow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{padding:10px 14px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}
+    button.secondary{background:#e5e7eb;color:#111827}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .footerNote{margin-top:12px;font-size:13px;opacity:.75}
+    .warn{color:#b45309;font-weight:900}
+  </style>
 </head>
 <body>
 <header>
@@ -20,6 +43,8 @@
       <div class="progress">第 <span id="qIndex">1</span> / 100 題</div>
       <div class="timer">剩餘時間：<span id="timeLeft">40:00</span></div>
     </div>
+
+    <div id="loadWarn" class="warn" style="display:none;margin-top:10px;"></div>
 
     <div class="imgBox">
       <img id="qImg" alt="題目圖片" />
@@ -37,11 +62,135 @@
     </div>
 
     <div class="footerNote">
-      規則：每題 1 個正確選項 + 3 個錯誤選項。錯誤選項必須來自「不同中文名稱」的圖片。
+      規則：每題 1 個正確選項 + 3 個錯誤選項。錯誤選項盡量來自同資料夾且不同中文名稱。 
     </div>
   </div>
 </main>
 
-<script src="./quiz.js"></script>
+<script>
+const LS_KEYS = { quizState: 'quizState_v2' };
+
+function loadState(){
+  const raw = localStorage.getItem(LS_KEYS.quizState);
+  if(!raw) return null;
+  try{ return JSON.parse(raw); }catch{ return null; }
+}
+function saveState(state){
+  localStorage.setItem(LS_KEYS.quizState, JSON.stringify(state));
+}
+function pad2(n){ return String(n).padStart(2,'0'); }
+function formatTime(sec){
+  sec = Math.max(0, Math.floor(sec));
+  const m = Math.floor(sec/60), s = sec%60;
+  return pad2(m)+':'+pad2(s);
+}
+
+function render(state){
+  const idx = state.currentIndex;
+  const q = state.questions[idx];
+
+  document.getElementById('qIndex').textContent = String(idx + 1);
+
+  const img = document.getElementById('qImg');
+  img.src = q.imgUrl || '';
+  img.onerror = () => { img.alt = '圖片載入失敗'; };
+
+  const optionsDiv = document.getElementById('options');
+  optionsDiv.innerHTML = '';
+
+  const chosen = state.answers[idx];
+
+  q.options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'optBtn' + (chosen === opt ? ' selected' : '');
+    btn.type = 'button';
+    btn.textContent = opt.replaceAll('_',' / '); // 顯示更好讀
+    btn.addEventListener('click', () => {
+      state.answers[idx] = opt;
+      saveState(state);
+      render(state);
+    });
+    optionsDiv.appendChild(btn);
+  });
+
+  document.getElementById('prevBtn').disabled = (idx === 0);
+  document.getElementById('nextBtn').disabled = (idx === 99);
+}
+
+function submit(state){
+  // 計分
+  let score = 0;
+  const details = [];
+  for(let i=0;i<100;i++){
+    const q = state.questions[i];
+    const a = state.answers[i];
+    const ok = (a && a === q.correct);
+    if(ok) score++;
+    details.push({
+      no: i+1,
+      your: a,
+      correct: q.correct,
+      ok
+    });
+  }
+  const result = {
+    playerName: state.playerName || '匿名',
+    score,
+    details,
+    finishedAt: Date.now(),
+  };
+  localStorage.setItem('result_v2', JSON.stringify(result));
+  window.location.href = './result.html';
+}
+
+(function init(){
+  const warn = document.getElementById('loadWarn');
+  const state = loadState();
+  if(!state || !state.questions || state.questions.length !== 100){
+    warn.style.display = 'block';
+    warn.textContent = '找不到測驗資料（quizState_v2）。請回首頁重新開始。';
+    document.getElementById('prevBtn').disabled = true;
+    document.getElementById('nextBtn').disabled = true;
+    document.getElementById('saveExitBtn').disabled = true;
+    document.getElementById('submitBtn').disabled = true;
+    return;
+  }
+
+  // timer
+  const tick = () => {
+    const elapsed = (Date.now() - state.startTime) / 1000;
+    const left = state.durationSec - elapsed;
+    document.getElementById('timeLeft').textContent = formatTime(left);
+    if(left <= 0){
+      submit(state);
+    }
+  };
+  tick();
+  setInterval(tick, 500);
+
+  // buttons
+  document.getElementById('prevBtn').addEventListener('click', () => {
+    state.currentIndex = Math.max(0, state.currentIndex - 1);
+    saveState(state);
+    render(state);
+  });
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    state.currentIndex = Math.min(99, state.currentIndex + 1);
+    saveState(state);
+    render(state);
+  });
+  document.getElementById('saveExitBtn').addEventListener('click', () => {
+    saveState(state);
+    window.location.href = './index.html';
+  });
+  document.getElementById('submitBtn').addEventListener('click', () => {
+    if(confirm('確定要交卷嗎？')){
+      submit(state);
+    }
+  });
+
+  render(state);
+})();
+</script>
 </body>
 </html>

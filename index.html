@@ -6,6 +6,22 @@
   <title>園藝丙級術科識別線上模擬測驗</title>
   <meta name="keywords" content="園藝丙級,術科,模擬測驗,識別" />
   <link rel="stylesheet" href="./style.css" />
+  <style>
+    /* 沒有 style.css 也能看 */
+    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans TC","Microsoft JhengHei",sans-serif;margin:0;background:#f6f7fb}
+    header{background:#111827;color:#fff;padding:20px 0}
+    .container{max-width:980px;margin:0 auto;padding:0 16px}
+    .card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.07);margin:18px 0}
+    .row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between}
+    .muted{opacity:.8;line-height:1.55}
+    input{padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;min-width:260px}
+    button{padding:10px 14px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .badge{display:inline-block;background:#eef2ff;color:#3730a3;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800}
+    .warn{color:#b45309;margin-top:10px;font-weight:700}
+    .ok{color:#047857;margin-top:10px;font-weight:700}
+    .footerNote{margin-top:12px;font-size:13px;opacity:.75}
+  </style>
 </head>
 <body>
 <header>
@@ -42,16 +58,213 @@
       抽題比例：果樹20 / 蔬果20 / 水生4 / 蔓性6 / 草本20 / 灌木10 / 喬木10 / 資材10
     </div>
 
+    <div id="status" class="muted" style="margin-top:12px;">正在檢查 all_images.json…</div>
+
     <div style="margin-top:14px;">
-      <button id="startBtn">開始測驗</button>
+      <button id="startBtn" disabled>開始測驗</button>
     </div>
 
     <div class="footerNote">
-      小提醒：你可以先用「假資料題庫」練習，之後再把 questions.json 換成真正的題庫。
+      本版本直接讀取 <b>all_images.json</b> 產生 100 題，不需要 questions.json。
     </div>
   </div>
 </main>
 
-<script src="./home.js"></script>
+<script>
+/** ====== 基本設定：8 類別 + 抽題比例（總共 100） ====== */
+const CATEGORY_PLAN = [
+  { key:'B', name:'果樹 fruit',      quota:20 },
+  { key:'G', name:'蔬果 vegetables', quota:20 },
+  { key:'A', name:'水生 aquatic',    quota:4  },
+  { key:'H', name:'蔓性 vine',       quota:6  },
+  { key:'C', name:'草本 herbaceous', quota:20 },
+  { key:'E', name:'灌木 shrub',      quota:10 },
+  { key:'F', name:'喬木 trees',      quota:10 },
+  { key:'D', name:'資材 materials',  quota:10 },
+];
+
+const LS_KEYS = {
+  playersCount: 'playersCount',
+  playerName: 'playerName',
+  quizState: 'quizState_v2',
+};
+
+function incPlayersCount(){
+  const n = Number(localStorage.getItem(LS_KEYS.playersCount) || '0') + 1;
+  localStorage.setItem(LS_KEYS.playersCount, String(n));
+  return n;
+}
+function getPlayersCount(){
+  return Number(localStorage.getItem(LS_KEYS.playersCount) || '0');
+}
+
+/** public_id -> 中文名稱（去掉尾端 _數字_亂碼 或 _亂碼） */
+function toLabel(publicId){
+  const parts = String(publicId || '').split('_').filter(Boolean);
+  if(parts.length <= 1) return String(publicId || '');
+  const last = parts[parts.length - 1];
+  const secondLast = parts[parts.length - 2];
+
+  const isNum = /^\d+$/.test(secondLast);
+  const isHashy = /^[a-z0-9]{5,}$/i.test(last);
+
+  if(isNum && isHashy && parts.length >= 3){
+    return parts.slice(0, -2).join('_');      // 例：香蕉_11_gfggb9 -> 香蕉
+  }
+  if(isHashy && parts.length >= 2){
+    return parts.slice(0, -1).join('_');      // 例：XXX_abcd12 -> XXX
+  }
+  return parts.slice(0, -1).join('_');
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+/** 建題：每題 1 張圖；正解=該圖 label；錯誤=同類別其他 label（不足才跨類別補） */
+function buildQuestions(db){
+  // db: all_images.json 解析後物件，含 A..H
+  // 先把每類別做成 label -> images[]
+  const catMap = {};
+  for(const plan of CATEGORY_PLAN){
+    const cat = db[plan.key];
+    const images = (cat && cat.images) ? cat.images : [];
+    const groups = new Map();
+    for(const it of images){
+      const label = toLabel(it.public_id);
+      if(!groups.has(label)) groups.set(label, []);
+      groups.get(label).push({ public_id: it.public_id, url: it.url, label });
+    }
+    catMap[plan.key] = {
+      key: plan.key,
+      name: plan.name,
+      quota: plan.quota,
+      labels: Array.from(groups.keys()),
+      groups,
+    };
+  }
+
+  // 做出 100 題的類別序列（依 quota）
+  let seq = [];
+  for(const p of CATEGORY_PLAN){
+    seq = seq.concat(Array.from({length:p.quota}, () => p.key));
+  }
+  seq = shuffle(seq);
+
+  // 全站 label 池（當某類別 label 太少時補錯誤選項）
+  const globalLabelPool = [];
+  for(const k of Object.keys(catMap)){
+    globalLabelPool.push(...catMap[k].labels.map(l => ({catKey:k, label:l})));
+  }
+
+  const questions = [];
+
+  for(let i=0;i<seq.length;i++){
+    const catKey = seq[i];
+    const cat = catMap[catKey];
+    if(!cat || cat.labels.length === 0){
+      // 類別沒資料：跳過（理論上不會）
+      continue;
+    }
+
+    // 正解 label
+    const correctLabel = cat.labels[Math.floor(Math.random()*cat.labels.length)];
+    const imgs = cat.groups.get(correctLabel) || [];
+    const pick = imgs[Math.floor(Math.random()*imgs.length)];
+
+    // 錯誤 label（同類別、不同中文名稱）
+    let wrongLabels = cat.labels.filter(l => l !== correctLabel);
+    wrongLabels = shuffle(wrongLabels).slice(0, 3);
+
+    // 不足 3 個就用全站補（仍需不同 label）
+    if(wrongLabels.length < 3){
+      const need = 3 - wrongLabels.length;
+      const existing = new Set([correctLabel, ...wrongLabels]);
+      const extra = shuffle(globalLabelPool)
+        .map(x => x.label)
+        .filter(l => !existing.has(l));
+      wrongLabels = wrongLabels.concat(extra.slice(0, need));
+    }
+
+    const options = shuffle([correctLabel, ...wrongLabels]).slice(0,4);
+
+    questions.push({
+      catKey,
+      imgUrl: pick ? pick.url : '',
+      correct: correctLabel,
+      options,
+    });
+  }
+
+  // 保底：一定要 100 題
+  if(questions.length !== 100){
+    throw new Error(`題目數量異常：${questions.length}（應為 100）`);
+  }
+
+  return questions;
+}
+
+async function loadAllImages(){
+  const res = await fetch('./all_images.json', { cache: 'no-store' });
+  if(!res.ok) throw new Error('讀取 all_images.json 失敗：' + res.status);
+  return await res.json();
+}
+
+(async function init(){
+  document.getElementById('totalPlayers').textContent = String(getPlayersCount());
+
+  const status = document.getElementById('status');
+  const startBtn = document.getElementById('startBtn');
+  const nameInput = document.getElementById('playerName');
+
+  nameInput.value = localStorage.getItem(LS_KEYS.playerName) || '';
+
+  try{
+    const db = await loadAllImages();
+    // 簡單檢查：至少要有 A..H
+    const missing = ['A','B','C','D','E','F','G','H'].filter(k => !db[k]);
+    if(missing.length){
+      status.className = 'warn';
+      status.textContent = 'all_images.json 缺少類別：' + missing.join(', ');
+      return;
+    }
+    status.className = 'ok';
+    status.textContent = '✅ all_images.json 讀取成功！可以開始測驗。';
+    startBtn.disabled = false;
+
+    startBtn.addEventListener('click', async () => {
+      const playerName = nameInput.value.trim() || '匿名';
+      localStorage.setItem(LS_KEYS.playerName, playerName);
+
+      // 建題
+      const questions = buildQuestions(db);
+
+      // 建立測驗狀態（40 分鐘）
+      const now = Date.now();
+      const quizState = {
+        version: 2,
+        playerName,
+        startTime: now,
+        durationSec: 40 * 60,
+        currentIndex: 0,
+        answers: Array(100).fill(null), // 每題存選到的 option 字串
+        questions,
+      };
+
+      localStorage.setItem(LS_KEYS.quizState, JSON.stringify(quizState));
+      incPlayersCount();
+      window.location.href = './quiz.html';
+    });
+  }catch(err){
+    status.className = 'warn';
+    status.textContent = '❌ ' + (err && err.message ? err.message : String(err));
+  }
+})();
+</script>
 </body>
 </html>
