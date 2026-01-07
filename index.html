@@ -3,122 +3,268 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>園藝丙級術科識別｜官方考試模式</title>
+  <title>園藝丙級術科識別線上模擬測驗</title>
+  <meta name="keywords" content="園藝丙級,術科,模擬測驗,識別" />
+  <link rel="stylesheet" href="./style.css" />
   <style>
-    :root{--bg:#f4f6fb;--card:#fff;--text:#0f172a;--muted:#64748b;--primary:#2563eb;--border:#e5e7eb;--shadow:0 10px 30px rgba(15,23,42,.08);}
-    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Noto Sans TC,Arial,sans-serif;background:var(--bg);color:var(--text);}
-    header{padding:28px 16px 14px}
-    .wrap{max-width:980px;margin:0 auto;padding:0 16px 40px}
-    h1{margin:0 0 8px;font-size:28px}
-    .sub{color:var(--muted);line-height:1.6}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:18px;margin-top:18px}
-    .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
-    label{font-weight:600}
-    input{height:44px;border:1px solid var(--border);border-radius:12px;padding:0 12px;min-width:220px;font-size:16px}
-    .btn{height:44px;border:0;border-radius:12px;padding:0 16px;font-weight:700;cursor:pointer}
-    .btn.primary{background:var(--primary);color:#fff}
-    .btn.ghost{background:#eef2ff;color:#1e3a8a}
-    .pill{display:inline-flex;gap:8px;align-items:center;padding:10px 12px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);background:#fafafa}
-    .pill b{color:var(--text)}
-    .warn{margin-top:10px;color:#b45309}
-    code{background:#0b1220;color:#e2e8f0;border-radius:8px;padding:2px 8px}
+    /* 沒有 style.css 也能看 */
+    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans TC","Microsoft JhengHei",sans-serif;margin:0;background:#f6f7fb}
+    header{background:#111827;color:#fff;padding:20px 0}
+    .container{max-width:980px;margin:0 auto;padding:0 16px}
+    .card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.07);margin:18px 0}
+    .row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;justify-content:space-between}
+    .muted{opacity:.8;line-height:1.55}
+    input{padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;min-width:260px}
+    button{padding:10px 14px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .badge{display:inline-block;background:#eef2ff;color:#3730a3;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800}
+    .warn{color:#b45309;margin-top:10px;font-weight:700}
+    .ok{color:#047857;margin-top:10px;font-weight:700}
+    .footerNote{margin-top:12px;font-size:13px;opacity:.75}
   </style>
 </head>
 <body>
-<header class="wrap">
-  <h1>官方考試模式</h1>
-  <div class="sub">40 分鐘倒數、100 題固定順序（本次作答不亂跳）。交卷後可在結果頁「點結果回看該題」，並可切換「只回看錯題」。</div>
+<header>
+  <div class="container">
+    <h1>園藝丙級術科識別線上模擬測驗</h1>
+    <div class="muted">
+      資料來源：勞動部勞動力發展署技能檢定中心。<br/>
+      本網站圖片僅供教育與非營利用途，著作權歸原權利人所有，嚴禁未經授權之商業使用。
+    </div>
+  </div>
 </header>
 
-<main class="wrap">
+<main class="container">
   <div class="card">
     <div class="row">
-      <label for="sid">姓名 / 代號</label>
-      <input id="sid" placeholder="例如：123" />
-      <span class="pill">測驗時間：<b>40 分鐘</b>　題數：<b>100 題</b></span>
-    </div>
-    <div class="row" style="margin-top:14px">
-      <button class="btn primary" id="startBtn">開始測驗</button>
-      <button class="btn ghost" id="resumeBtn" title="如果你剛剛不小心關掉頁面，可繼續作答">繼續上次作答</button>
-      <span class="sub" id="status"></span>
-    </div>
-    <div class="warn" id="warn"></div>
-  </div>
+      <label>
+        <div class="badge">請輸入姓名或代號</div><br/>
+        <input id="playerName" type="text" placeholder="例如：小明 / A01" />
+      </label>
 
-  <div class="card">
-    <div class="sub">
-      題庫來源：預設讀取同資料夾的 <code>questions.json</code>（若你的題庫檔名不同，請把檔名改成 questions.json，或在 quiz.html 內調整 <code>QUESTION_SOURCE</code>）。
+      <div>
+        <div class="badge">目前累計測驗人數達</div>
+        <div style="font-size:22px;font-weight:800;margin-top:6px;">
+          <span id="totalPlayers">0</span> 人
+        </div>
+      </div>
+    </div>
+
+    <hr/>
+
+    <div class="muted">
+      本試題由電腦亂數抽題產生，總共 100 題（每題 1 分，總分 100 分），單選題，可前後翻題。<br/>
+      測試時間：40 分鐘。<br/>
+      抽題比例：果樹20 / 蔬果20 / 水生4 / 蔓性6 / 草本20 / 灌木10 / 喬木10 / 資材10
+    </div>
+
+    <div id="status" class="muted" style="margin-top:12px;">正在檢查 all_images.json…</div>
+
+    <div style="margin-top:14px;">
+      <button id="startBtn" disabled>開始測驗</button>
+    </div>
+
+    <div class="footerNote">
+      本版本直接讀取 <b>all_images.json</b> 產生 100 題，不需要 questions.json。
     </div>
   </div>
 </main>
 
 <script>
-(() => {
-  const LS = {
-    quizState: 'quizState_v2',
-    result: 'result_v2'
-  };
+/** ====== 基本設定：8 類別 + 抽題比例（總共 100） ====== */
+const CATEGORY_PLAN = [
+  { key:'B', name:'果樹 fruit',      quota:20 },
+  { key:'G', name:'蔬果 vegetables', quota:20 },
+  { key:'A', name:'水生 aquatic',    quota:4  },
+  { key:'H', name:'蔓性 vine',       quota:6  },
+  { key:'C', name:'草本 herbaceous', quota:20 },
+  { key:'E', name:'灌木 shrub',      quota:10 },
+  { key:'F', name:'喬木 trees',      quota:10 },
+  { key:'D', name:'資材 materials',  quota:10 },
+];
 
-  const $ = (id) => document.getElementById(id);
-  const sid = $('sid');
-  const status = $('status');
-  const warn = $('warn');
+const LS_KEYS = {
+  playersCount: 'playersCount',
+  playerName: 'playerName',
+  quizState: 'quizState_v2',
+};
 
-  function readState(){
-    try { return JSON.parse(localStorage.getItem(LS.quizState) || 'null'); } catch { return null; }
+function incPlayersCount(){
+  const n = Number(localStorage.getItem(LS_KEYS.playersCount) || '0') + 1;
+  localStorage.setItem(LS_KEYS.playersCount, String(n));
+  return n;
+}
+function getPlayersCount(){
+  return Number(localStorage.getItem(LS_KEYS.playersCount) || '0');
+}
+
+/** public_id -> 中文名稱（去掉尾端 _數字_亂碼 或 _亂碼） */
+function toLabel(publicId){
+  const parts = String(publicId || '').split('_').filter(Boolean);
+  if(parts.length <= 1) return String(publicId || '');
+  const last = parts[parts.length - 1];
+  const secondLast = parts[parts.length - 2];
+
+  const isNum = /^\d+$/.test(secondLast);
+  const isHashy = /^[a-z0-9]{5,}$/i.test(last);
+
+  if(isNum && isHashy && parts.length >= 3){
+    return parts.slice(0, -2).join('_');      // 例：香蕉_11_gfggb9 -> 香蕉
   }
-  function writeState(s){ localStorage.setItem(LS.quizState, JSON.stringify(s)); }
-
-  function hasInProgress(state){
-    return state && state.phase === 'exam' && !state.submitted && Array.isArray(state.questions) && state.questions.length;
+  if(isHashy && parts.length >= 2){
+    return parts.slice(0, -1).join('_');      // 例：XXX_abcd12 -> XXX
   }
+  return parts.slice(0, -1).join('_');
+}
 
-  function newAttempt(studentId){
-    // 清掉舊成績，建立新考試狀態；題目由 quiz.html 載入/建立後再寫回
-    localStorage.removeItem(LS.result);
-    const now = Date.now();
-    const state = {
-      version: 2,
-      phase: 'exam',          // 'exam' | 'review'
-      studentId: studentId || '',
-      durationSec: 40 * 60,
-      startAt: now,
-      submitted: false,
-      currentIndex: 0,
-      // questions: 由 quiz.html 讀取題庫後產生並寫回（每題固定 options/correctIndex）
-      questions: null,
-      answers: {} // { [qid]: selectedIndex }
-    };
-    writeState(state);
-    return state;
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
   }
+  return a;
+}
 
-  function updateUI(){
-    const st = readState();
-    if (hasInProgress(st)){
-      status.textContent = `已偵測到未交卷的作答紀錄（剩餘時間會接續），可按「繼續上次作答」。`;
-    } else {
-      status.textContent = '';
+/** 建題：每題 1 張圖；正解=該圖 label；錯誤=同類別其他 label（不足才跨類別補） */
+function buildQuestions(db){
+  // db: all_images.json 解析後物件，含 A..H
+  // 先把每類別做成 label -> images[]
+  const catMap = {};
+  for(const plan of CATEGORY_PLAN){
+    const cat = db[plan.key];
+    const images = (cat && cat.images) ? cat.images : [];
+    const groups = new Map();
+    for(const it of images){
+      const label = toLabel(it.public_id);
+      if(!groups.has(label)) groups.set(label, []);
+      groups.get(label).push({ public_id: it.public_id, url: it.url, label });
     }
+    catMap[plan.key] = {
+      key: plan.key,
+      name: plan.name,
+      quota: plan.quota,
+      labels: Array.from(groups.keys()),
+      groups,
+    };
   }
 
-  $('startBtn').addEventListener('click', () => {
-    const id = sid.value.trim();
-    newAttempt(id);
-    location.href = './quiz.html';
-  });
+  // 做出 100 題的類別序列（依 quota）
+  let seq = [];
+  for(const p of CATEGORY_PLAN){
+    seq = seq.concat(Array.from({length:p.quota}, () => p.key));
+  }
+  seq = shuffle(seq);
 
-  $('resumeBtn').addEventListener('click', () => {
-    const st = readState();
-    if (hasInProgress(st)){
-      location.href = './quiz.html';
+  // 全站 label 池（當某類別 label 太少時補錯誤選項）
+  const globalLabelPool = [];
+  for(const k of Object.keys(catMap)){
+    globalLabelPool.push(...catMap[k].labels.map(l => ({catKey:k, label:l})));
+  }
+
+  const questions = [];
+
+  for(let i=0;i<seq.length;i++){
+    const catKey = seq[i];
+    const cat = catMap[catKey];
+    if(!cat || cat.labels.length === 0){
+      // 類別沒資料：跳過（理論上不會）
+      continue;
+    }
+
+    // 正解 label
+    const correctLabel = cat.labels[Math.floor(Math.random()*cat.labels.length)];
+    const imgs = cat.groups.get(correctLabel) || [];
+    const pick = imgs[Math.floor(Math.random()*imgs.length)];
+
+    // 錯誤 label（同類別、不同中文名稱）
+    let wrongLabels = cat.labels.filter(l => l !== correctLabel);
+    wrongLabels = shuffle(wrongLabels).slice(0, 3);
+
+    // 不足 3 個就用全站補（仍需不同 label）
+    if(wrongLabels.length < 3){
+      const need = 3 - wrongLabels.length;
+      const existing = new Set([correctLabel, ...wrongLabels]);
+      const extra = shuffle(globalLabelPool)
+        .map(x => x.label)
+        .filter(l => !existing.has(l));
+      wrongLabels = wrongLabels.concat(extra.slice(0, need));
+    }
+
+    const options = shuffle([correctLabel, ...wrongLabels]).slice(0,4);
+
+    questions.push({
+      catKey,
+      imgUrl: pick ? pick.url : '',
+      correct: correctLabel,
+      options,
+    });
+  }
+
+  // 保底：一定要 100 題
+  if(questions.length !== 100){
+    throw new Error(`題目數量異常：${questions.length}（應為 100）`);
+  }
+
+  return questions;
+}
+
+async function loadAllImages(){
+  const res = await fetch('./all_images.json', { cache: 'no-store' });
+  if(!res.ok) throw new Error('讀取 all_images.json 失敗：' + res.status);
+  return await res.json();
+}
+
+(async function init(){
+  document.getElementById('totalPlayers').textContent = String(getPlayersCount());
+
+  const status = document.getElementById('status');
+  const startBtn = document.getElementById('startBtn');
+  const nameInput = document.getElementById('playerName');
+
+  nameInput.value = localStorage.getItem(LS_KEYS.playerName) || '';
+
+  try{
+    const db = await loadAllImages();
+    const data = db.folders;   // ← 新增這行
+
+    // 簡單檢查：至少要有 A..H
+    const missing = ['A','B','C','D','E','F','G','H'].filter(k => !data[k]);
+    if(missing.length){
+      status.className = 'warn';
+      status.textContent = 'all_images.json 缺少類別：' + missing.join(', ');
       return;
     }
-    warn.textContent = '找不到可續作的測驗紀錄。請按「開始測驗」。';
-    setTimeout(()=> warn.textContent='', 2500);
-  });
+    status.className = 'ok';
+    status.textContent = '✅ all_images.json 讀取成功！可以開始測驗。';
+    startBtn.disabled = false;
 
-  updateUI();
+    startBtn.addEventListener('click', async () => {
+      const playerName = nameInput.value.trim() || '匿名';
+      localStorage.setItem(LS_KEYS.playerName, playerName);
+
+      // 建題
+      const questions = buildQuestions(data);
+      // 建立測驗狀態（40 分鐘）
+      const now = Date.now();
+      const quizState = {
+        version: 2,
+        playerName,
+        startTime: now,
+        durationSec: 40 * 60,
+        currentIndex: 0,
+        answers: Array(100).fill(null), // 每題存選到的 option 字串
+        questions,
+      };
+
+      localStorage.setItem(LS_KEYS.quizState, JSON.stringify(quizState));
+      incPlayersCount();
+      window.location.href = './quiz.html';
+    });
+  }catch(err){
+    status.className = 'warn';
+    status.textContent = '❌ ' + (err && err.message ? err.message : String(err));
+  }
 })();
 </script>
 </body>
