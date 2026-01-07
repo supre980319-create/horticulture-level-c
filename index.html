@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>園藝丙級術科識別｜官方考試模式</title>
+  <style>
+    :root{--bg:#f4f6fb;--card:#fff;--text:#0f172a;--muted:#64748b;--primary:#2563eb;--border:#e5e7eb;--shadow:0 10px 30px rgba(15,23,42,.08);}
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Noto Sans TC,Arial,sans-serif;background:var(--bg);color:var(--text);}
+    header{padding:28px 16px 14px}
+    .wrap{max-width:980px;margin:0 auto;padding:0 16px 40px}
+    h1{margin:0 0 8px;font-size:28px}
+    .sub{color:var(--muted);line-height:1.6}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:18px;margin-top:18px}
+    .row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+    label{font-weight:600}
+    input{height:44px;border:1px solid var(--border);border-radius:12px;padding:0 12px;min-width:220px;font-size:16px}
+    .btn{height:44px;border:0;border-radius:12px;padding:0 16px;font-weight:700;cursor:pointer}
+    .btn.primary{background:var(--primary);color:#fff}
+    .btn.ghost{background:#eef2ff;color:#1e3a8a}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:10px 12px;border:1px dashed var(--border);border-radius:12px;color:var(--muted);background:#fafafa}
+    .pill b{color:var(--text)}
+    .warn{margin-top:10px;color:#b45309}
+    code{background:#0b1220;color:#e2e8f0;border-radius:8px;padding:2px 8px}
+  </style>
+</head>
+<body>
+<header class="wrap">
+  <h1>官方考試模式</h1>
+  <div class="sub">40 分鐘倒數、100 題固定順序（本次作答不亂跳）。交卷後可在結果頁「點結果回看該題」，並可切換「只回看錯題」。</div>
+</header>
+
+<main class="wrap">
+  <div class="card">
+    <div class="row">
+      <label for="sid">姓名 / 代號</label>
+      <input id="sid" placeholder="例如：123" />
+      <span class="pill">測驗時間：<b>40 分鐘</b>　題數：<b>100 題</b></span>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn primary" id="startBtn">開始測驗</button>
+      <button class="btn ghost" id="resumeBtn" title="如果你剛剛不小心關掉頁面，可繼續作答">繼續上次作答</button>
+      <span class="sub" id="status"></span>
+    </div>
+    <div class="warn" id="warn"></div>
+  </div>
+
+  <div class="card">
+    <div class="sub">
+      題庫來源：預設讀取同資料夾的 <code>questions.json</code>（若你的題庫檔名不同，請把檔名改成 questions.json，或在 quiz.html 內調整 <code>QUESTION_SOURCE</code>）。
+    </div>
+  </div>
+</main>
+
+<script>
+(() => {
+  const LS = {
+    quizState: 'quizState_v2',
+    result: 'result_v2'
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const sid = $('sid');
+  const status = $('status');
+  const warn = $('warn');
+
+  function readState(){
+    try { return JSON.parse(localStorage.getItem(LS.quizState) || 'null'); } catch { return null; }
+  }
+  function writeState(s){ localStorage.setItem(LS.quizState, JSON.stringify(s)); }
+
+  function hasInProgress(state){
+    return state && state.phase === 'exam' && !state.submitted && Array.isArray(state.questions) && state.questions.length;
+  }
+
+  function newAttempt(studentId){
+    // 清掉舊成績，建立新考試狀態；題目由 quiz.html 載入/建立後再寫回
+    localStorage.removeItem(LS.result);
+    const now = Date.now();
+    const state = {
+      version: 2,
+      phase: 'exam',          // 'exam' | 'review'
+      studentId: studentId || '',
+      durationSec: 40 * 60,
+      startAt: now,
+      submitted: false,
+      currentIndex: 0,
+      // questions: 由 quiz.html 讀取題庫後產生並寫回（每題固定 options/correctIndex）
+      questions: null,
+      answers: {} // { [qid]: selectedIndex }
+    };
+    writeState(state);
+    return state;
+  }
+
+  function updateUI(){
+    const st = readState();
+    if (hasInProgress(st)){
+      status.textContent = `已偵測到未交卷的作答紀錄（剩餘時間會接續），可按「繼續上次作答」。`;
+    } else {
+      status.textContent = '';
+    }
+  }
+
+  $('startBtn').addEventListener('click', () => {
+    const id = sid.value.trim();
+    newAttempt(id);
+    location.href = './quiz.html';
+  });
+
+  $('resumeBtn').addEventListener('click', () => {
+    const st = readState();
+    if (hasInProgress(st)){
+      location.href = './quiz.html';
+      return;
+    }
+    warn.textContent = '找不到可續作的測驗紀錄。請按「開始測驗」。';
+    setTimeout(()=> warn.textContent='', 2500);
+  });
+
+  updateUI();
+})();
+</script>
+</body>
+</html>
