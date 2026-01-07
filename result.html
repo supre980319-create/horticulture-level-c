@@ -1,123 +1,132 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>結果頁｜園藝丙級術科識別線上模擬測驗</title>
-  <link rel="stylesheet" href="./style.css" />
-  <style>
-    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans TC","Microsoft JhengHei",sans-serif;margin:0;background:#f6f7fb}
-    header{background:#111827;color:#fff;padding:20px 0}
-    .container{max-width:1100px;margin:0 auto;padding:0 16px}
-    .card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.07);margin:18px 0}
-    .muted{opacity:.8;line-height:1.55}
-    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
-    th,td{border-bottom:1px solid #e5e7eb;padding:10px 8px;text-align:left;vertical-align:top}
-    th{background:#f9fafb}
-    .ok{color:#047857;font-weight:900}
-    .bad{color:#b91c1c;font-weight:900}
-    .navRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
-    button{padding:10px 14px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}
-    button.secondary{background:#e5e7eb;color:#111827}
-    .warn{color:#b45309;font-weight:900}
-    .thumb{width:120px;height:78px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;background:#111827}
-    @media (max-width:720px){ .thumb{width:92px;height:60px} }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>測驗結果｜園藝丙級術科識別</title>
+
+<style>
+body{font-family:"Microsoft JhengHei",system-ui;background:#f6f7fb;margin:0}
+header{background:#111827;color:#fff;padding:20px 0}
+.container{max-width:1100px;margin:auto;padding:0 16px}
+.card{background:#fff;border-radius:14px;padding:18px;margin:18px 0;box-shadow:0 10px 30px rgba(0,0,0,.07)}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{border-bottom:1px solid #e5e7eb;padding:10px}
+th{background:#f9fafb}
+.ok{color:#047857;font-weight:900}
+.bad{color:#b91c1c;font-weight:900}
+.thumb{width:110px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #ddd}
+tr.click:hover{background:#f1f5f9}
+.badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800}
+.badge.bad{background:#fee2e2;color:#991b1b}
+.badge.ok{background:#dcfce7;color:#065f46}
+.nav{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+button{padding:8px 14px;border-radius:10px;border:0;font-weight:800;cursor:pointer}
+.primary{background:#2563eb;color:#fff}
+.secondary{background:#e5e7eb}
+</style>
 </head>
+
 <body>
 <header>
   <div class="container">
-    <h1>結果頁</h1>
-    <div class="muted">
-      本網站圖片僅供教育與非營利用途，著作權歸原權利人所有，嚴禁未經授權之商業使用。
-    </div>
+    <h1>測驗結果</h1>
+    <div style="opacity:.8">可點擊題目回看（唯讀）</div>
   </div>
 </header>
 
 <main class="container">
-  <div class="card">
-    <div id="warn" class="warn" style="display:none;"></div>
-
-    <div style="font-size:18px;font-weight:800;">姓名/代號：<span id="rName"></span></div>
-    <div style="font-size:22px;font-weight:900;margin-top:6px;">分數：<span id="rScore"></span> / 100</div>
-
-    <hr/>
-
-    <table>
-      <thead>
-        <tr>
-          <th style="width:70px;">題號</th>
-          <th style="width:140px;">正確答案圖片</th>
-          <th>你的答案</th>
-          <th>正確答案</th>
-          <th style="width:90px;">對錯</th>
-        </tr>
-      </thead>
-      <tbody id="rTable"></tbody>
-    </table>
-
-    <div class="navRow">
-      <button class="secondary" id="retryBtn">再測一次</button>
-      <button id="backHomeBtn">回首頁</button>
-    </div>
+<div class="card">
+  <div><b>姓名 / 代號：</b><span id="name"></span></div>
+  <div style="font-size:22px;font-weight:900;margin-top:6px">
+    分數：<span id="score"></span> / 100
   </div>
+  <div style="margin-top:6px">
+    未作答題數：<b id="blankCount"></b>　
+    作答完成率：<b id="rate"></b>%
+  </div>
+
+  <div class="nav">
+    <button class="primary" id="showAll">全部題目</button>
+    <button class="secondary" id="showWrong">只回看錯題</button>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>題號</th>
+        <th>圖片</th>
+        <th>作答狀況</th>
+        <th>結果</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+
+  <div class="nav">
+    <button class="secondary" onclick="retry()">再測一次</button>
+    <button class="secondary" onclick="home()">回首頁</button>
+  </div>
+</div>
 </main>
 
 <script>
-const LS_KEYS = { quizState: 'quizState_v2', result: 'result_v2' };
+const LS = { result:'result_v2', quiz:'quizState_v2' };
+const LETTERS=['A','B','C','D'];
 
-function pretty(x){
-  if(!x) return '（未作答）';
-  return String(x).replaceAll('_',' / ');
-}
+const data = JSON.parse(localStorage.getItem(LS.result));
+if(!data){ alert('找不到結果'); location.href='index.html'; }
 
-(function init(){
-  const warn = document.getElementById('warn');
-  const raw = localStorage.getItem(LS_KEYS.result);
-  if(!raw){
-    warn.style.display = 'block';
-    warn.textContent = '找不到結果資料（result_v2）。可能尚未交卷，請回首頁開始測驗。';
-    document.getElementById('rName').textContent = '—';
-    document.getElementById('rScore').textContent = '0';
-    return;
-  }
+const all = data.details;
 
-  let result;
-  try{ result = JSON.parse(raw); }catch{
-    warn.style.display = 'block';
-    warn.textContent = '結果資料格式錯誤。';
-    return;
-  }
+document.getElementById('name').textContent = data.playerName || '—';
+document.getElementById('score').textContent = data.score;
 
-  document.getElementById('rName').textContent = result.playerName || '匿名';
-  document.getElementById('rScore').textContent = String(result.score || 0);
+const blank = all.filter(q=>!q.your).length;
+document.getElementById('blankCount').textContent = blank;
+document.getElementById('rate').textContent =
+  Math.round(((100-blank)/100)*100);
 
-  const tbody = document.getElementById('rTable');
-  tbody.innerHTML = '';
+const tbody = document.getElementById('tbody');
 
-  (result.details || []).forEach(row => {
-    const tr = document.createElement('tr');
-    const imgCell = row.imgUrl
-      ? `<img class="thumb" src="${row.imgUrl}" alt="題目圖片" loading="lazy" />`
-      : `<span style="opacity:.65;">（無圖片）</span>`;
-    tr.innerHTML = `
-      <td>${row.no}</td>
-      <td>${imgCell}</td>
-      <td>${pretty(row.your)}</td>
-      <td>${pretty(row.correct)}</td>
-      <td class="${row.ok ? 'ok' : 'bad'}">${row.ok ? '✔ 正確' : '✘ 錯誤'}</td>
+function render(list){
+  tbody.innerHTML='';
+  list.forEach(q=>{
+    const yourIdx = q.your ? q.options?.indexOf(q.your) : -1;
+    const correctIdx = q.options?.indexOf(q.correct);
+
+    const tr=document.createElement('tr');
+    tr.className='click';
+    tr.innerHTML=`
+      <td>${q.no}</td>
+      <td><img class="thumb" src="${q.imgUrl}"></td>
+      <td>
+        你選：${q.your ? LETTERS[yourIdx]+'（'+q.your+'）' : '未作答'}<br>
+        正解：${LETTERS[correctIdx]}（${q.correct}）
+      </td>
+      <td class="${q.ok?'ok':'bad'}">
+        ${q.ok?'✔ 正確':'✘ 錯誤'}
+      </td>
     `;
+    tr.onclick=()=>{
+      const st=JSON.parse(localStorage.getItem(LS.quiz));
+      st.currentIndex=q.no-1;
+      st.reviewMode=true;
+      localStorage.setItem(LS.quiz,JSON.stringify(st));
+      location.href='quiz.html';
+    };
     tbody.appendChild(tr);
   });
+}
 
-  document.getElementById('retryBtn').addEventListener('click', () => {
-    localStorage.removeItem(LS_KEYS.quizState);
-    window.location.href = './index.html';
-  });
-  document.getElementById('backHomeBtn').addEventListener('click', () => {
-    window.location.href = './index.html';
-  });
-})();
+document.getElementById('showAll').onclick=()=>render(all);
+document.getElementById('showWrong').onclick=
+  ()=>render(all.filter(q=>!q.ok));
+
+render(all);
+
+function retry(){ localStorage.removeItem(LS.quiz); location.href='index.html'; }
+function home(){ location.href='index.html'; }
 </script>
 </body>
 </html>
