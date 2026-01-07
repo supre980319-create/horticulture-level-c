@@ -1,132 +1,236 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>測驗結果｜園藝丙級術科識別</title>
-
-<style>
-body{font-family:"Microsoft JhengHei",system-ui;background:#f6f7fb;margin:0}
-header{background:#111827;color:#fff;padding:20px 0}
-.container{max-width:1100px;margin:auto;padding:0 16px}
-.card{background:#fff;border-radius:14px;padding:18px;margin:18px 0;box-shadow:0 10px 30px rgba(0,0,0,.07)}
-table{width:100%;border-collapse:collapse;margin-top:12px}
-th,td{border-bottom:1px solid #e5e7eb;padding:10px}
-th{background:#f9fafb}
-.ok{color:#047857;font-weight:900}
-.bad{color:#b91c1c;font-weight:900}
-.thumb{width:110px;height:72px;object-fit:cover;border-radius:8px;border:1px solid #ddd}
-tr.click:hover{background:#f1f5f9}
-.badge{display:inline-block;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800}
-.badge.bad{background:#fee2e2;color:#991b1b}
-.badge.ok{background:#dcfce7;color:#065f46}
-.nav{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
-button{padding:8px 14px;border-radius:10px;border:0;font-weight:800;cursor:pointer}
-.primary{background:#2563eb;color:#fff}
-.secondary{background:#e5e7eb}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>測驗結果｜官方格式</title>
+  <style>
+    :root{--bg:#f4f6fb;--card:#fff;--text:#0f172a;--muted:#64748b;--primary:#2563eb;--border:#e5e7eb;--shadow:0 10px 30px rgba(15,23,42,.08);--ok:#16a34a;--bad:#dc2626;}
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Noto Sans TC,Arial,sans-serif;background:var(--bg);color:var(--text);}
+    header{background:#0b1220;color:#e2e8f0;padding:28px 16px}
+    header .wrap{max-width:1120px;margin:0 auto}
+    h1{margin:0 0 8px;font-size:28px}
+    .sub{color:#94a3b8;line-height:1.6}
+    main{max-width:1120px;margin:0 auto;padding:18px 16px 40px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow);padding:16px}
+    .meta{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end}
+    .meta .k{font-weight:800;font-size:18px}
+    .meta .v{font-weight:900;font-size:22px}
+    .meta .muted{color:var(--muted);font-weight:700}
+    .btns{margin-top:12px;display:flex;gap:10px;flex-wrap:wrap}
+    .btn{height:40px;border-radius:12px;border:1px solid var(--border);background:#fff;padding:0 14px;font-weight:900;cursor:pointer}
+    .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+    .btn.ghost{background:#eef2ff;border-color:#bfdbfe;color:#1e3a8a}
+    table{width:100%;border-collapse:collapse;margin-top:14px;font-size:15px}
+    thead th{background:#f8fafc;color:#334155;text-align:left;padding:12px;border-bottom:1px solid var(--border)}
+    tbody td{padding:12px;border-bottom:1px solid var(--border);vertical-align:middle}
+    tbody tr{cursor:pointer}
+    tbody tr:hover{background:#f8fafc}
+    .thumb{width:110px;height:70px;border-radius:10px;object-fit:cover;border:1px solid var(--border);background:#0b1220}
+    .status{line-height:1.6}
+    .status b{display:inline-block;min-width:72px}
+    .badge{display:inline-flex;align-items:center;gap:6px;font-weight:900}
+    .badge.ok{color:var(--ok)}
+    .badge.bad{color:var(--bad)}
+    .note{margin-top:10px;color:var(--muted);font-size:13px;line-height:1.6}
+    .right{white-space:nowrap}
+  </style>
 </head>
-
 <body>
 <header>
-  <div class="container">
+  <div class="wrap">
     <h1>測驗結果</h1>
-    <div style="opacity:.8">可點擊題目回看（唯讀）</div>
+    <div class="sub">可點整列回看該題（回看模式鎖定，不可更改答案）；也可切換「只回看錯題」。</div>
   </div>
 </header>
 
-<main class="container">
-<div class="card">
-  <div><b>姓名 / 代號：</b><span id="name"></span></div>
-  <div style="font-size:22px;font-weight:900;margin-top:6px">
-    分數：<span id="score"></span> / 100
-  </div>
-  <div style="margin-top:6px">
-    未作答題數：<b id="blankCount"></b>　
-    作答完成率：<b id="rate"></b>%
-  </div>
+<main>
+  <div class="card">
+    <div class="meta">
+      <div>
+        <div class="k">姓名 / 代號：<span class="v" id="student">—</span></div>
+        <div class="k">分數：<span class="v" id="score">—</span> / <span class="v" id="total">—</span></div>
+      </div>
+      <div class="muted" style="margin-left:auto">
+        <div>未作答題數：<span id="unanswered">—</span></div>
+        <div>作答完成率：<span id="completion">—</span>%</div>
+      </div>
+    </div>
 
-  <div class="nav">
-    <button class="primary" id="showAll">全部題目</button>
-    <button class="secondary" id="showWrong">只回看錯題</button>
-  </div>
+    <div class="btns">
+      <button class="btn primary" id="allBtn">全部題目</button>
+      <button class="btn ghost" id="wrongBtn">只回看錯題</button>
+      <button class="btn" id="backHomeBtn">回首頁</button>
+    </div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>題號</th>
-        <th>圖片</th>
-        <th>作答狀況</th>
-        <th>結果</th>
-      </tr>
-    </thead>
-    <tbody id="tbody"></tbody>
-  </table>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:80px">題號</th>
+          <th style="width:140px">圖片</th>
+          <th>作答狀況（官方格式）</th>
+          <th class="right" style="width:110px">結果</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
 
-  <div class="nav">
-    <button class="secondary" onclick="retry()">再測一次</button>
-    <button class="secondary" onclick="home()">回首頁</button>
+    <div class="note" id="note"></div>
   </div>
-</div>
 </main>
 
 <script>
-const LS = { result:'result_v2', quiz:'quizState_v2' };
-const LETTERS=['A','B','C','D'];
+(() => {
+  const LS = { quizState:'quizState_v2', result:'result_v2', resultFilter:'resultFilter_v2' };
+  const LETTERS = ['A','B','C','D'];
+  const el = (id)=>document.getElementById(id);
 
-const data = JSON.parse(localStorage.getItem(LS.result));
-if(!data){ alert('找不到結果'); location.href='index.html'; }
+  function safeParse(s){ try{ return JSON.parse(s); }catch{ return null; } }
+  function readResult(){ return safeParse(localStorage.getItem(LS.result) || 'null'); }
+  function readState(){ return safeParse(localStorage.getItem(LS.quizState) || 'null'); }
+  function writeState(s){ localStorage.setItem(LS.quizState, JSON.stringify(s)); }
+  function setFilter(f){ localStorage.setItem(LS.resultFilter, f); }
+  function getFilter(){ return localStorage.getItem(LS.resultFilter) || 'all'; }
 
-const all = data.details;
+  function normalizeResult(result){
+    // 如果舊 result 缺欄位，用 quizState 補齊（避免出現 undefined）
+    const state = readState();
+    if (!result || !Array.isArray(result.items)) return null;
+    if (!state || !Array.isArray(state.questions)) return result;
 
-document.getElementById('name').textContent = data.playerName || '—';
-document.getElementById('score').textContent = data.score;
+    const qMap = new Map(state.questions.map(q => [q.qid, q]));
+    result.items = result.items.map(it => {
+      const q = qMap.get(it.qid);
+      if (q){
+        const correctIndex = (typeof it.correctIndex === 'number') ? it.correctIndex : q.correctIndex;
+        const correctLetter = it.correctLetter || LETTERS[correctIndex];
+        const correctText = it.correctText || q.correctText;
+        const imgUrl = it.imgUrl || q.imgUrl;
+        const sel = (it.selectedIndex === null || it.selectedIndex === undefined) ? null : it.selectedIndex;
+        const selectedLetter = (sel === null) ? null : (it.selectedLetter || LETTERS[sel]);
+        const selectedText = (sel === null) ? null : (it.selectedText || q.options[sel]);
+        const ok = (sel !== null) && (sel === correctIndex);
+        return {...it, imgUrl, correctIndex, correctLetter, correctText, selectedLetter, selectedText, ok};
+      }
+      // fallback
+      const ci = (typeof it.correctIndex==='number') ? it.correctIndex : 0;
+      return {...it, correctLetter: it.correctLetter || LETTERS[ci], correctIndex: ci, correctText: it.correctText || ''};
+    });
+    result.correctCount = (typeof result.correctCount==='number') ? result.correctCount : result.items.filter(x=>x.ok).length;
+    result.total = (typeof result.total==='number') ? result.total : result.items.length;
+    result.score = (typeof result.score==='number') ? result.score : result.correctCount;
+    result.unansweredCount = (typeof result.unansweredCount==='number') ? result.unansweredCount : result.items.filter(x=>x.selectedIndex===null || x.selectedIndex===undefined).length;
+    result.completionRate = (typeof result.completionRate==='number') ? result.completionRate : (result.total ? Math.round(((result.total-result.unansweredCount)/result.total)*1000)/10 : 0);
+    return result;
+  }
 
-const blank = all.filter(q=>!q.your).length;
-document.getElementById('blankCount').textContent = blank;
-document.getElementById('rate').textContent =
-  Math.round(((100-blank)/100)*100);
+  function setHeader(result){
+    el('student').textContent = result.studentId || '—';
+    el('score').textContent = result.score ?? result.correctCount ?? 0;
+    el('total').textContent = result.total ?? (result.items ? result.items.length : 100);
+    el('unanswered').textContent = result.unansweredCount ?? 0;
+    el('completion').textContent = result.completionRate ?? 0;
+  }
 
-const tbody = document.getElementById('tbody');
+  function badge(ok){
+    if (ok) return `<span class="badge ok">✓ 正確</span>`;
+    return `<span class="badge bad">✗ 錯誤</span>`;
+  }
 
-function render(list){
-  tbody.innerHTML='';
-  list.forEach(q=>{
-    const yourIdx = q.your ? q.options?.indexOf(q.your) : -1;
-    const correctIdx = q.options?.indexOf(q.correct);
+  function renderTable(result, filter){
+    const tbody = el('tbody');
+    tbody.innerHTML = '';
 
-    const tr=document.createElement('tr');
-    tr.className='click';
-    tr.innerHTML=`
-      <td>${q.no}</td>
-      <td><img class="thumb" src="${q.imgUrl}"></td>
-      <td>
-        你選：${q.your ? LETTERS[yourIdx]+'（'+q.your+'）' : '未作答'}<br>
-        正解：${LETTERS[correctIdx]}（${q.correct}）
-      </td>
-      <td class="${q.ok?'ok':'bad'}">
-        ${q.ok?'✔ 正確':'✘ 錯誤'}
-      </td>
-    `;
-    tr.onclick=()=>{
-      const st=JSON.parse(localStorage.getItem(LS.quiz));
-      st.currentIndex=q.no-1;
-      st.reviewMode=true;
-      localStorage.setItem(LS.quiz,JSON.stringify(st));
-      location.href='quiz.html';
-    };
-    tbody.appendChild(tr);
-  });
-}
+    const list = (filter === 'wrong') ? result.items.filter(x => !x.ok) : result.items.slice();
 
-document.getElementById('showAll').onclick=()=>render(all);
-document.getElementById('showWrong').onclick=
-  ()=>render(all.filter(q=>!q.ok));
+    list.forEach(it => {
+      const tr = document.createElement('tr');
+      const your = (it.selectedLetter === null || it.selectedLetter === undefined) ? '未作答' : it.selectedLetter;
+      const correct = it.correctLetter ?? 'A';
+      const yourText = (it.selectedText ? `（${escapeHtml(it.selectedText)}）` : '');
+      const correctText = (it.correctText ? `（${escapeHtml(it.correctText)}）` : '');
 
-render(all);
+      tr.innerHTML = `
+        <td><b>${it.idx + 1}</b></td>
+        <td><img class="thumb" src="${escapeAttr(it.imgUrl || '')}" alt="題目圖片"/></td>
+        <td class="status">
+          <div><b>你選：</b>${escapeHtml(your)} ${yourText}</div>
+          <div><b>正解：</b>${escapeHtml(correct)} ${correctText}</div>
+        </td>
+        <td class="right">${badge(it.ok)}</td>
+      `;
 
-function retry(){ localStorage.removeItem(LS.quiz); location.href='index.html'; }
-function home(){ location.href='index.html'; }
+      tr.addEventListener('click', () => {
+        // 進入回看模式：鎖定、且依 filter 決定是否只看錯題
+        const state = readState() || {};
+        state.phase = 'review';
+        state.reviewOnlyWrong = (filter === 'wrong');
+        state.reviewStartIdx = it.idx;     // 指定要跳到哪一題（依原題號）
+        state.submitted = true;            // 表示已交卷
+        // 不要動 answers/questions，保持本次作答一致
+        writeState(state);
+        location.href = './quiz.html';
+      });
+
+      tbody.appendChild(tr);
+    });
+
+    el('note').textContent = (filter === 'wrong')
+      ? `目前顯示：錯題 ${list.length} 題（點任一列可進入「只回看錯題」模式）`
+      : `目前顯示：全部 ${list.length} 題（點任一列可回看該題）`;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escapeAttr(s){
+    return String(s).replace(/"/g,'&quot;');
+  }
+
+  function updateButtons(filter){
+    const allBtn = el('allBtn');
+    const wrongBtn = el('wrongBtn');
+    if (filter === 'wrong'){
+      allBtn.className = 'btn ghost';
+      wrongBtn.className = 'btn primary';
+    } else {
+      allBtn.className = 'btn primary';
+      wrongBtn.className = 'btn ghost';
+    }
+  }
+
+  function init(){
+    const raw = readResult();
+    const result = normalizeResult(raw);
+    if (!result){
+      alert('找不到測驗結果。請先完成測驗。');
+      location.href = './index.html';
+      return;
+    }
+    setHeader(result);
+
+    let filter = getFilter();
+    if (filter !== 'all' && filter !== 'wrong') filter = 'all';
+    updateButtons(filter);
+    renderTable(result, filter);
+
+    el('allBtn').addEventListener('click', () => {
+      setFilter('all');
+      updateButtons('all');
+      renderTable(result, 'all');
+    });
+    el('wrongBtn').addEventListener('click', () => {
+      setFilter('wrong');
+      updateButtons('wrong');
+      renderTable(result, 'wrong');
+    });
+    el('backHomeBtn').addEventListener('click', () => {
+      location.href = './index.html';
+    });
+  }
+
+  init();
+})();
 </script>
 </body>
 </html>
