@@ -8,7 +8,7 @@
   <style>
     body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans TC","Microsoft JhengHei",sans-serif;margin:0;background:#f6f7fb}
     header{background:#111827;color:#fff;padding:20px 0}
-    .container{max-width:980px;margin:0 auto;padding:0 16px}
+    .container{max-width:1100px;margin:0 auto;padding:0 16px}
     .card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.07);margin:18px 0}
     .muted{opacity:.8;line-height:1.55}
     table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}
@@ -20,6 +20,8 @@
     button{padding:10px 14px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}
     button.secondary{background:#e5e7eb;color:#111827}
     .warn{color:#b45309;font-weight:900}
+    .thumb{width:120px;height:78px;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb;background:#111827}
+    @media (max-width:720px){ .thumb{width:92px;height:60px} }
   </style>
 </head>
 <body>
@@ -45,9 +47,10 @@
       <thead>
         <tr>
           <th style="width:70px;">題號</th>
+          <th style="width:140px;">正確答案圖片</th>
           <th>你的答案</th>
           <th>正確答案</th>
-          <th style="width:80px;">對錯</th>
+          <th style="width:90px;">對錯</th>
         </tr>
       </thead>
       <tbody id="rTable"></tbody>
@@ -61,13 +64,16 @@
 </main>
 
 <script>
+const LS_KEYS = { quizState: 'quizState_v2', result: 'result_v2' };
+
 function pretty(x){
   if(!x) return '（未作答）';
   return String(x).replaceAll('_',' / ');
 }
+
 (function init(){
   const warn = document.getElementById('warn');
-  const raw = localStorage.getItem('result_v2');
+  const raw = localStorage.getItem(LS_KEYS.result);
   if(!raw){
     warn.style.display = 'block';
     warn.textContent = '找不到結果資料（result_v2）。可能尚未交卷，請回首頁開始測驗。';
@@ -91,18 +97,21 @@ function pretty(x){
 
   (result.details || []).forEach(row => {
     const tr = document.createElement('tr');
+    const imgCell = row.imgUrl
+      ? `<img class="thumb" src="${row.imgUrl}" alt="題目圖片" loading="lazy" />`
+      : `<span style="opacity:.65;">（無圖片）</span>`;
     tr.innerHTML = `
       <td>${row.no}</td>
+      <td>${imgCell}</td>
       <td>${pretty(row.your)}</td>
       <td>${pretty(row.correct)}</td>
-      <td class="${row.ok ? 'ok' : 'bad'}">${row.ok ? '✔' : '✘'}</td>
+      <td class="${row.ok ? 'ok' : 'bad'}">${row.ok ? '✔ 正確' : '✘ 錯誤'}</td>
     `;
     tbody.appendChild(tr);
   });
 
   document.getElementById('retryBtn').addEventListener('click', () => {
-    // 清掉舊測驗狀態，回首頁重建
-    localStorage.removeItem('quizState_v2');
+    localStorage.removeItem(LS_KEYS.quizState);
     window.location.href = './index.html';
   });
   document.getElementById('backHomeBtn').addEventListener('click', () => {

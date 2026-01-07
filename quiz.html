@@ -16,9 +16,9 @@
     .timer{font-weight:900}
     .imgBox{margin:14px 0;background:#0b1220;border-radius:14px;display:flex;justify-content:center;align-items:center;overflow:hidden}
     .imgBox img{max-width:100%;height:auto;display:block}
-    .options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
-    @media (max-width:720px){.options{grid-template-columns:1fr}}
-    .optBtn{border:1px solid #d1d5db;border-radius:12px;padding:10px 12px;background:#fff;cursor:pointer;text-align:left;font-weight:800}
+    .options{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0}
+    .optBtn{border:1px solid #d1d5db;border-radius:12px;padding:12px 14px;background:#fff;cursor:pointer;text-align:left;font-weight:800}
+    .optBtn .label{display:inline-block;min-width:28px}
     .optBtn.selected{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
     .navRow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
     button{padding:10px 14px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}
@@ -62,13 +62,13 @@
     </div>
 
     <div class="footerNote">
-      規則：每題 1 個正確選項 + 3 個錯誤選項。錯誤選項盡量來自同資料夾且不同中文名稱。 
+      規則：每題 1 個正確選項 + 3 個錯誤選項。若某題選項缺失，系統會自動補齊 4 個選項。
     </div>
   </div>
 </main>
 
 <script>
-const LS_KEYS = { quizState: 'quizState_v2' };
+const LS_KEYS = { quizState: 'quizState_v2', result: 'result_v2' };
 
 function loadState(){
   const raw = localStorage.getItem(LS_KEYS.quizState);
@@ -84,6 +84,119 @@ function formatTime(sec){
   const m = Math.floor(sec/60), s = sec%60;
   return pad2(m)+':'+pad2(s);
 }
+function pretty(x){
+  if(!x) return '';
+  return String(x).replaceAll('_',' / ');
+}
+function uniq(arr){
+  const out = [];
+  const seen = new Set();
+  for(const x of arr){
+    const v = (x ?? '').toString().trim();
+    if(!v) continue;
+    if(seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
+  }
+  return out;
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+/** 從 Cloudinary public_id 萃取「中文名稱」：移除末段亂碼、移除角度編號 */
+function baseNameFromPublicId(pid){
+  const parts = String(pid||'').split('_').filter(Boolean);
+  if(parts.length <= 1) return String(pid||'');
+  // 最後一段通常是亂碼；倒數第二段可能是角度編號
+  const last = parts[parts.length-1];
+  const prev = parts[parts.length-2];
+  const cut = (prev && /^\d+$/.test(prev)) ? parts.slice(0,-2) : parts.slice(0,-1);
+  return cut.join('_');
+}
+
+let DB = null;              // all_images.json
+let NAME_TO_FOLDER = null;  // name -> A..H
+let POOLS = null;           // A..H -> [names]
+
+async function loadDb(){
+  if(DB) return DB;
+  const res = await fetch('./all_images.json', { cache: 'no-store' });
+  if(!res.ok) throw new Error('無法載入 all_images.json（HTTP '+res.status+'）');
+  DB = await res.json();
+
+  // build pools
+  const pools = {};
+  const map = {};
+  const folders = (DB && DB.folders) ? DB.folders : {};
+  for(const k of Object.keys(folders)){
+    const imgs = folders[k]?.images || [];
+    const names = [];
+    for(const it of imgs){
+      const nm = baseNameFromPublicId(it.public_id);
+      if(nm) names.push(nm);
+    }
+    const u = uniq(names);
+    pools[k] = u;
+    for(const nm of u){
+      if(!(nm in map)) map[nm] = k;
+    }
+  }
+  POOLS = pools;
+  NAME_TO_FOLDER = map;
+  return DB;
+}
+
+function getQField(q, keys, fallback){
+  for(const k of keys){
+    if(q && q[k] !== undefined && q[k] !== null) return q[k];
+  }
+  return fallback;
+}
+
+/** 確保每題都有 4 個選項，且包含正確答案 */
+function ensureFourOptions(q){
+  const correct = getQField(q, ['correct','answer','ans'], '').toString().trim();
+  let opts = getQField(q, ['options','choices'], []);
+  if(!Array.isArray(opts)) opts = [];
+  opts = uniq(opts);
+  if(correct && !opts.includes(correct)) opts.unshift(correct);
+  opts = uniq(opts);
+
+  // 已經 4 個就直接回傳
+  if(opts.length >= 4) return shuffle(opts.slice(0,4)).includes(correct) ? shuffle(opts.slice(0,4)) : (function(){
+    // 若切到把 correct 切掉，強制保留
+    const top = opts.filter(x => x !== correct).slice(0,3);
+    return shuffle([correct, ...top]);
+  })();
+
+  // 需要補齊：從同資料夾（同類別）找錯誤選項
+  const cat = getQField(q, ['cat','category','folderKey','group','section'], null);
+  let folderKey = cat;
+  if(!folderKey && correct) folderKey = NAME_TO_FOLDER?.[correct] || null;
+
+  let pool = [];
+  if(folderKey && POOLS && POOLS[folderKey]) pool = POOLS[folderKey];
+  else if(POOLS) pool = Object.values(POOLS).flat();
+
+  const candidates = pool.filter(nm => nm !== correct && !opts.includes(nm));
+  const need = 4 - opts.length;
+  const add = shuffle(candidates).slice(0, need);
+  const finalOpts = uniq([...opts, ...add]);
+
+  // 若還不足（極少數），就用全域補
+  if(finalOpts.length < 4 && POOLS){
+    const global = Object.values(POOLS).flat().filter(nm => nm !== correct && !finalOpts.includes(nm));
+    finalOpts.push(...shuffle(global).slice(0, 4-finalOpts.length));
+  }
+
+  return shuffle(finalOpts.slice(0,4));
+}
 
 function render(state){
   const idx = state.currentIndex;
@@ -92,19 +205,28 @@ function render(state){
   document.getElementById('qIndex').textContent = String(idx + 1);
 
   const img = document.getElementById('qImg');
-  img.src = q.imgUrl || '';
+  const imgUrl = getQField(q, ['imgUrl','imageUrl','url'], '');
+  img.src = imgUrl || '';
   img.onerror = () => { img.alt = '圖片載入失敗'; };
+
+  // ensure options
+  const opts = ensureFourOptions(q);
+  q.options = opts;               // 存回去，確保前後一致
+  q.correct = getQField(q, ['correct','answer','ans'], q.correct); // normalize
+  q.imgUrl = imgUrl;              // normalize
+  saveState(state);
 
   const optionsDiv = document.getElementById('options');
   optionsDiv.innerHTML = '';
 
   const chosen = state.answers[idx];
+  const labels = ['A','B','C','D'];
 
-  q.options.forEach(opt => {
+  opts.forEach((opt, i) => {
     const btn = document.createElement('button');
     btn.className = 'optBtn' + (chosen === opt ? ' selected' : '');
     btn.type = 'button';
-    btn.textContent = opt.replaceAll('_',' / '); // 顯示更好讀
+    btn.innerHTML = `<span class="label">${labels[i]}.</span> ${pretty(opt)}`;
     btn.addEventListener('click', () => {
       state.answers[idx] = opt;
       saveState(state);
@@ -118,19 +240,21 @@ function render(state){
 }
 
 function submit(state){
-  // 計分
   let score = 0;
   const details = [];
   for(let i=0;i<100;i++){
     const q = state.questions[i];
+    const correct = getQField(q, ['correct','answer','ans'], '');
+    const imgUrl = getQField(q, ['imgUrl','imageUrl','url'], '');
     const a = state.answers[i];
-    const ok = (a && a === q.correct);
+    const ok = (a && a === correct);
     if(ok) score++;
     details.push({
       no: i+1,
       your: a,
-      correct: q.correct,
-      ok
+      correct,
+      ok,
+      imgUrl
     });
   }
   const result = {
@@ -139,13 +263,14 @@ function submit(state){
     details,
     finishedAt: Date.now(),
   };
-  localStorage.setItem('result_v2', JSON.stringify(result));
+  localStorage.setItem(LS_KEYS.result, JSON.stringify(result));
   window.location.href = './result.html';
 }
 
-(function init(){
+(async function init(){
   const warn = document.getElementById('loadWarn');
   const state = loadState();
+
   if(!state || !state.questions || state.questions.length !== 100){
     warn.style.display = 'block';
     warn.textContent = '找不到測驗資料（quizState_v2）。請回首頁重新開始。';
@@ -156,14 +281,20 @@ function submit(state){
     return;
   }
 
+  // 載入 all_images.json，讓「缺選項」時可自動補齊
+  try{
+    await loadDb();
+  }catch(e){
+    // 不阻擋作答；只是無法自動補齊錯誤選項
+    console.warn(e);
+  }
+
   // timer
   const tick = () => {
     const elapsed = (Date.now() - state.startTime) / 1000;
     const left = state.durationSec - elapsed;
     document.getElementById('timeLeft').textContent = formatTime(left);
-    if(left <= 0){
-      submit(state);
-    }
+    if(left <= 0) submit(state);
   };
   tick();
   setInterval(tick, 500);
@@ -184,9 +315,7 @@ function submit(state){
     window.location.href = './index.html';
   });
   document.getElementById('submitBtn').addEventListener('click', () => {
-    if(confirm('確定要交卷嗎？')){
-      submit(state);
-    }
+    if(confirm('確定要交卷嗎？')) submit(state);
   });
 
   render(state);
