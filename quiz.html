@@ -5,21 +5,29 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>作答中｜園藝丙級術科識別線上模擬測驗</title>
   <link rel="stylesheet" href="./style.css" />
-
-<style>
-  .chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
-  .chip{background:#eef2ff;border-radius:999px;padding:6px 12px;font-weight:600;color:#1f2937}
-  .navPanel{margin-top:18px}
-  .navTitle{font-weight:700;margin:6px 0 10px 0;color:#111827}
-  .navGrid{display:flex;flex-wrap:wrap;gap:8px}
-  .navBtn{min-width:42px;height:38px;border-radius:10px;border:1px solid #e5e7eb;background:#f3f4f6;font-weight:700;cursor:pointer}
-  .navBtn.current{outline:2px solid #3b82f6;background:#e0f2fe}
-  .navBtn.answered{background:#dcfce7;border-color:#86efac}
-  .optItem{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;cursor:pointer;margin-bottom:12px}
-  .optItem input{transform:scale(1.1)}
-  .optItem:has(input:checked){border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,.25)}
-</style>
-
+  <style>
+    body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans TC","Microsoft JhengHei",sans-serif;margin:0;background:#f6f7fb}
+    header{background:#111827;color:#fff;padding:20px 0}
+    .container{max-width:980px;margin:0 auto;padding:0 16px}
+    .card{background:#fff;border-radius:14px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.07);margin:18px 0}
+    .muted{opacity:.8;line-height:1.55}
+    .quizTop{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    .progress{font-weight:900}
+    .timer{font-weight:900}
+    .imgBox{margin:14px 0;background:#0b1220;border-radius:14px;display:flex;justify-content:center;align-items:center;overflow:hidden}
+    .imgBox img{max-width:100%;height:auto;display:block}
+    .options{display:grid;grid-template-columns:1fr;gap:10px;margin:12px 0}
+    .optBtn{border:1px solid #d1d5db;border-radius:12px;padding:12px 14px;background:#fff;cursor:pointer;text-align:left;font-weight:800}
+    .optBtn .label{display:inline-block;min-width:28px}
+    .optBtn.selected{border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+    .navRow{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}
+    button{padding:10px 14px;border:0;border-radius:10px;background:#2563eb;color:#fff;font-weight:800;cursor:pointer}
+    button.secondary{background:#e5e7eb;color:#111827}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .footerNote{margin-top:12px;font-size:13px;opacity:.75}
+    .warn{color:#b45309;font-weight:900}
+  </style>
 </head>
 <body>
 <header>
@@ -30,13 +38,13 @@
 </header>
 
 <main class="container">
-  <div id="errorText" style="color:#d97706;margin:10px 0;"></div>
   <div class="card">
     <div class="quizTop">
-      <div class="chips"><span class="chip">考生：<span id="candidateName">—</span></span></div>
       <div class="progress">第 <span id="qIndex">1</span> / 100 題</div>
       <div class="timer">剩餘時間：<span id="timeLeft">40:00</span></div>
     </div>
+
+    <div id="loadWarn" class="warn" style="display:none;margin-top:10px;"></div>
 
     <div class="imgBox">
       <img id="qImg" alt="題目圖片" />
@@ -53,265 +61,273 @@
       <button class="secondary" id="nextBtn">下一題</button>
     </div>
 
-    
-    <div class="navPanel">
-      <div class="navTitle">題目導覽</div>
-      <div class="navGrid" id="navGrid"></div>
-    </div>
-
     <div class="footerNote">
-      規則：每題 1 個正確選項 + 3 個錯誤選項。錯誤選項必須來自「不同中文名稱」的圖片。
+      規則：每題 1 個正確選項 + 3 個錯誤選項。若某題選項缺失，系統會自動補齊 4 個選項。
     </div>
   </div>
 </main>
 
-
-
 <script>
-(() => {
-  const STATE_KEY = 'horti_quiz_state_v3';
-  const RESULT_KEY = 'horti_quiz_result_v3';
-  const DURATION_SECONDS = 40 * 60;
-  const LETTERS = ['A','B','C','D'];
+const LS_KEYS = { quizState: 'quizState_v2', result: 'result_v2' };
 
-  const $ = (id) => document.getElementById(id);
-  const nowMs = () => Date.now();
-
-  function pad2(n){ return String(n).padStart(2,'0'); }
-  function formatTime(sec){
-    sec = Math.max(0, Math.floor(sec));
-    const m = Math.floor(sec/60), s = sec%60;
-    return `${pad2(m)}:${pad2(s)}`;
+function loadState(){
+  const raw = localStorage.getItem(LS_KEYS.quizState);
+  if(!raw) return null;
+  try{ return JSON.parse(raw); }catch{ return null; }
+}
+function saveState(state){
+  localStorage.setItem(LS_KEYS.quizState, JSON.stringify(state));
+}
+function pad2(n){ return String(n).padStart(2,'0'); }
+function formatTime(sec){
+  sec = Math.max(0, Math.floor(sec));
+  const m = Math.floor(sec/60), s = sec%60;
+  return pad2(m)+':'+pad2(s);
+}
+function pretty(x){
+  if(!x) return '';
+  return String(x).replaceAll('_',' / ');
+}
+function uniq(arr){
+  const out = [];
+  const seen = new Set();
+  for(const x of arr){
+    const v = (x ?? '').toString().trim();
+    if(!v) continue;
+    if(seen.has(v)) continue;
+    seen.add(v);
+    out.push(v);
   }
-
-  function loadState(){
-    try{
-      const raw = localStorage.getItem(STATE_KEY);
-      if(!raw) return null;
-      const st = JSON.parse(raw);
-      if(!st || !Array.isArray(st.questions) || !Array.isArray(st.answers)) return null;
-      return st;
-    }catch(e){ return null; }
+  return out;
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
   }
-  function saveState(st){
-    try{ localStorage.setItem(STATE_KEY, JSON.stringify(st)); }catch(e){}
-  }
+  return a;
+}
 
-  function nameFromPublicId(publicId){
-    if(!publicId) return '';
-    const parts = publicId.split('_');
-    if(parts.length>=2 && /^[a-z0-9]{4,12}$/i.test(parts[parts.length-1])) parts.pop();
-    if(parts.length>=2 && /^\d+$/.test(parts[parts.length-1])) parts.pop();
-    return parts.join(' / ').trim();
-  }
+/** 從 Cloudinary public_id 萃取「中文名稱」：移除末段亂碼、移除角度編號 */
+function baseNameFromPublicId(pid){
+  const parts = String(pid||'').split('_').filter(Boolean);
+  if(parts.length <= 1) return String(pid||'');
+  // 最後一段通常是亂碼；倒數第二段可能是角度編號
+  const last = parts[parts.length-1];
+  const prev = parts[parts.length-2];
+  const cut = (prev && /^\d+$/.test(prev)) ? parts.slice(0,-2) : parts.slice(0,-1);
+  return cut.join('_');
+}
 
-  function shuffleInPlace(arr){
-    for(let i=arr.length-1;i>0;i--){
-      const j = Math.floor(Math.random()*(i+1));
-      [arr[i], arr[j]] = [arr[j], arr[i]];
+let DB = null;              // all_images.json
+let NAME_TO_FOLDER = null;  // name -> A..H
+let POOLS = null;           // A..H -> [names]
+
+async function loadDb(){
+  if(DB) return DB;
+  const res = await fetch('./all_images.json', { cache: 'no-store' });
+  if(!res.ok) throw new Error('無法載入 all_images.json（HTTP '+res.status+'）');
+  DB = await res.json();
+
+  // build pools
+  const pools = {};
+  const map = {};
+  const folders = (DB && DB.folders) ? DB.folders : {};
+  for(const k of Object.keys(folders)){
+    const imgs = folders[k]?.images || [];
+    const names = [];
+    for(const it of imgs){
+      const nm = baseNameFromPublicId(it.public_id);
+      if(nm) names.push(nm);
     }
-    return arr;
-  }
-  function sampleN(arr, n){
-    const copy = arr.slice();
-    shuffleInPlace(copy);
-    return copy.slice(0, Math.min(n, copy.length));
-  }
-
-  async function fetchAllImages(){
-    const res = await fetch('all_images.json', {cache:'no-store'});
-    if(!res.ok) throw new Error('Failed to load all_images.json');
-    return await res.json();
-  }
-
-  function buildQuestions(all){
-    const folders = all.folders || {};
-    const desired = { aquatic:4, fruit:20, herbaceous:20, materials:10, shrub:10, trees:10, vegetables:20, vine:6 };
-
-    const allNamesSet = new Set();
-    Object.values(folders).forEach(f => (f.images||[]).forEach(img => allNamesSet.add(nameFromPublicId(img.public_id))));
-    const allNames = Array.from(allNamesSet).filter(Boolean);
-
-    const questions = [];
-    for(const [folderName, count] of Object.entries(desired)){
-      const folderObj = Object.values(folders).find(f => f.folder === folderName) || folders[folderName];
-      const imgs = (folderObj && folderObj.images) ? folderObj.images : [];
-      const picked = sampleN(imgs, count);
-      picked.forEach(img => {
-        const correctName = nameFromPublicId(img.public_id);
-        const wrongPool = allNames.filter(n => n && n !== correctName);
-        const wrongs = sampleN(wrongPool, 3);
-        const options = shuffleInPlace([correctName, ...wrongs]);
-        questions.push({
-          folder: folderName,
-          imageUrl: img.secure_url || img.url,
-          public_id: img.public_id,
-          correctName,
-          options,
-          correctIndex: options.indexOf(correctName)
-        });
-      });
+    const u = uniq(names);
+    pools[k] = u;
+    for(const nm of u){
+      if(!(nm in map)) map[nm] = k;
     }
+  }
+  POOLS = pools;
+  NAME_TO_FOLDER = map;
+  return DB;
+}
 
-    while(questions.length < 100){
-      const anyFolder = Object.values(folders).find(f => (f.images||[]).length>0);
-      if(!anyFolder) break;
-      const img = anyFolder.images[Math.floor(Math.random()*anyFolder.images.length)];
-      const correctName = nameFromPublicId(img.public_id);
-      const wrongPool = allNames.filter(n => n && n !== correctName);
-      const wrongs = sampleN(wrongPool, 3);
-      const options = shuffleInPlace([correctName, ...wrongs]);
-      questions.push({
-        folder: anyFolder.folder,
-        imageUrl: img.secure_url || img.url,
-        public_id: img.public_id,
-        correctName,
-        options,
-        correctIndex: options.indexOf(correctName)
-      });
-    }
-    questions.length = Math.min(100, questions.length);
-    shuffleInPlace(questions);
-    return questions;
+function getQField(q, keys, fallback){
+  for(const k of keys){
+    if(q && q[k] !== undefined && q[k] !== null) return q[k];
+  }
+  return fallback;
+}
+
+/** 確保每題都有 4 個選項，且包含正確答案 */
+function ensureFourOptions(q){
+  const correct = getQField(q, ['correct','answer','ans'], '').toString().trim();
+  let opts = getQField(q, ['options','choices'], []);
+  if(!Array.isArray(opts)) opts = [];
+
+  // 如果這題已經固定過選項，就不要再洗牌
+  if(q && q.__optionsFixed && opts.length === 4){
+    return opts;
   }
 
-  function render(st){
-    const q = st.questions[st.currentIndex];
+  opts = uniq(opts.map(x => x.toString().trim()).filter(Boolean));
+  if(correct && !opts.includes(correct)) opts.unshift(correct);
+  opts = uniq(opts);
 
-    $('candidateName').textContent = st.candidate || '—';
-    $('qIndex').textContent = String(st.currentIndex + 1);
-    $('timeLeft').textContent = formatTime((st.endsAt - nowMs())/1000);
+  const folder = getQField(q, ['folder','category','cat','type'], '').toString().trim();
+  const poolSame = (folder && POOLS[folder]) ? POOLS[folder].slice() : [];
+  const poolAll = Object.values(POOLS).flat().slice();
 
-    const imgEl = $('qImg');
-    imgEl.src = q.imageUrl;
-    imgEl.alt = q.correctName || '題目圖片';
+  function fillFrom(pool){
+    shuffle(pool);
+    for(const name of pool){
+      const n = name.toString().trim();
+      if(n && !opts.includes(n)){
+        opts.push(n);
+        if(opts.length >= 4) break;
+      }
+    }
+  }
 
-    // options fixed order per question
-    const chosenIdx = (typeof st.answers[st.currentIndex] === 'number') ? st.answers[st.currentIndex] : null;
-    const box = $('options');
-    box.innerHTML = '';
-    q.options.forEach((optText, optIdx) => {
-      const label = document.createElement('label');
-      label.className = 'optItem';
+  if(opts.length < 4) fillFrom(poolSame);
+  if(opts.length < 4) fillFrom(poolAll);
 
-      const input = document.createElement('input');
-      input.type = 'radio';
-      input.name = 'answer';
-      input.value = String(optIdx);
-      input.checked = chosenIdx === optIdx;
+  // 強制保留 correct
+  if(correct && !opts.includes(correct)){
+    opts = [correct, ...opts.filter(x => x !== correct)];
+  }
 
-      const span = document.createElement('span');
-      span.textContent = `${LETTERS[optIdx]}.  ${optText}`;
+  opts = opts.slice(0,4);
+  opts = shuffle(opts); // 只在第一次固定時洗牌一次
 
-      label.appendChild(input);
-      label.appendChild(span);
+  // 固定住（之後導覽回來不會亂跳）
+  q.options = opts;
+  q.__optionsFixed = true;
+  return opts;
+}
 
-      label.addEventListener('click', (e) => {
-        e.preventDefault();
-        st.answers[st.currentIndex] = optIdx;
-        saveState(st);
-        render(st); // re-render but options order unchanged
-      });
+function render(state){
+  const idx = state.currentIndex;
+  const q = state.questions[idx];
 
-      box.appendChild(label);
+  document.getElementById('qIndex').textContent = String(idx + 1);
+
+  const img = document.getElementById('qImg');
+  const imgUrl = getQField(q, ['imgUrl','imageUrl','url'], '');
+  img.src = imgUrl || '';
+  img.onerror = () => { img.alt = '圖片載入失敗'; };
+
+  // ensure options
+  const opts = ensureFourOptions(q);
+  q.options = opts;               // 存回去，確保前後一致
+  q.correct = getQField(q, ['correct','answer','ans'], q.correct); // normalize
+  q.imgUrl = imgUrl;              // normalize
+  saveState(state);
+
+  const optionsDiv = document.getElementById('options');
+  optionsDiv.innerHTML = '';
+
+  const chosen = state.answers[idx];
+  const labels = ['A','B','C','D'];
+
+  opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'optBtn' + (chosen === opt ? ' selected' : '');
+    btn.type = 'button';
+    btn.innerHTML = `<span class="label">${labels[i]}.</span> ${pretty(opt)}`;
+    btn.addEventListener('click', () => {
+      state.answers[idx] = opt;
+      saveState(state);
+      render(state);
     });
-
-    // nav buttons
-    $('prevBtn').disabled = st.currentIndex === 0;
-    $('nextBtn').disabled = st.currentIndex === st.questions.length - 1;
-
-    // nav grid (no re-randomization)
-    const nav = $('navGrid');
-    nav.innerHTML = '';
-    for(let i=0;i<st.questions.length;i++){
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'navBtn';
-      btn.textContent = String(i+1);
-
-      if(i === st.currentIndex) btn.classList.add('current');
-      if(typeof st.answers[i] === 'number') btn.classList.add('answered');
-
-      btn.addEventListener('click', () => {
-        st.currentIndex = i;
-        saveState(st);
-        render(st);
-        window.scrollTo({top:0, behavior:'smooth'});
-      });
-
-      nav.appendChild(btn);
-    }
-  }
-
-  function submit(st){
-    const results = st.questions.map((q, i) => {
-      const chosenIdx = (typeof st.answers[i] === 'number') ? st.answers[i] : null;
-      const chosenText = (chosenIdx!==null) ? q.options[chosenIdx] : null;
-      const isCorrect = chosenIdx === q.correctIndex;
-      return {
-        index: i+1,
-        imageUrl: q.imageUrl,
-        public_id: q.public_id,
-        correctName: q.correctName,
-        correctOption: `${LETTERS[q.correctIndex]}. ${q.correctName}`,
-        chosenOption: chosenIdx===null ? null : `${LETTERS[chosenIdx]}. ${chosenText}`,
-        isCorrect
-      };
-    });
-    const score = results.reduce((a,r)=>a+(r.isCorrect?1:0),0);
-    localStorage.setItem(RESULT_KEY, JSON.stringify({
-      candidate: st.candidate,
-      startedAt: st.startedAt,
-      endedAt: nowMs(),
-      score,
-      total: st.questions.length,
-      results
-    }));
-    window.location.href = 'result.html';
-  }
-
-  function tick(st){
-    const remaining = Math.max(0, Math.floor((st.endsAt - nowMs())/1000));
-    $('timeLeft').textContent = formatTime(remaining);
-    if(remaining <= 0) submit(st);
-  }
-
-  async function main(){
-    let st = loadState();
-    if(!st){
-      const params = new URLSearchParams(location.search);
-      const candidate = params.get('name') || params.get('candidate') || params.get('id') || '';
-      const all = await fetchAllImages();
-      const questions = buildQuestions(all);
-      st = {
-        candidate,
-        questions,
-        answers: new Array(questions.length).fill(null),
-        currentIndex: 0,
-        startedAt: nowMs(),
-        endsAt: nowMs() + DURATION_SECONDS*1000
-      };
-      saveState(st);
-    }
-
-    $('prevBtn').addEventListener('click', () => { if(st.currentIndex>0){ st.currentIndex--; saveState(st); render(st); window.scrollTo({top:0, behavior:'smooth'});} });
-    $('nextBtn').addEventListener('click', () => { if(st.currentIndex<st.questions.length-1){ st.currentIndex++; saveState(st); render(st); window.scrollTo({top:0, behavior:'smooth'});} });
-    $('saveExitBtn').addEventListener('click', () => { saveState(st); window.location.href='index.html'; });
-    $('submitBtn').addEventListener('click', () => submit(st));
-
-    render(st);
-    setInterval(()=>tick(st), 250);
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    main().catch(err => {
-      console.error(err);
-      const el = $('errorText');
-      if(el) el.textContent = '載入失敗：請確認 all_images.json 與 quiz.html 在同一資料夾，並重新整理。';
-    });
+    optionsDiv.appendChild(btn);
   });
+
+  document.getElementById('prevBtn').disabled = (idx === 0);
+  document.getElementById('nextBtn').disabled = (idx === 99);
+}
+
+function submit(state){
+  let score = 0;
+  const details = [];
+  for(let i=0;i<100;i++){
+    const q = state.questions[i];
+    const correct = getQField(q, ['correct','answer','ans'], '');
+    const imgUrl = getQField(q, ['imgUrl','imageUrl','url'], '');
+    const a = state.answers[i];
+    const ok = (a && a === correct);
+    if(ok) score++;
+    details.push({
+      no: i+1,
+      your: a,
+      correct,
+      ok,
+      imgUrl
+    });
+  }
+  const result = {
+    playerName: state.playerName || '匿名',
+    score,
+    details,
+    finishedAt: Date.now(),
+  };
+  localStorage.setItem(LS_KEYS.result, JSON.stringify(result));
+  window.location.href = './result.html';
+}
+
+(async function init(){
+  const warn = document.getElementById('loadWarn');
+  const state = loadState();
+
+  if(!state || !state.questions || state.questions.length !== 100){
+    warn.style.display = 'block';
+    warn.textContent = '找不到測驗資料（quizState_v2）。請回首頁重新開始。';
+    document.getElementById('prevBtn').disabled = true;
+    document.getElementById('nextBtn').disabled = true;
+    document.getElementById('saveExitBtn').disabled = true;
+    document.getElementById('submitBtn').disabled = true;
+    return;
+  }
+
+  // 載入 all_images.json，讓「缺選項」時可自動補齊
+  try{
+    await loadDb();
+  }catch(e){
+    // 不阻擋作答；只是無法自動補齊錯誤選項
+    console.warn(e);
+  }
+
+  // timer
+  const tick = () => {
+    const elapsed = (Date.now() - state.startTime) / 1000;
+    const left = state.durationSec - elapsed;
+    document.getElementById('timeLeft').textContent = formatTime(left);
+    if(left <= 0) submit(state);
+  };
+  tick();
+  setInterval(tick, 500);
+
+  // buttons
+  document.getElementById('prevBtn').addEventListener('click', () => {
+    state.currentIndex = Math.max(0, state.currentIndex - 1);
+    saveState(state);
+    render(state);
+  });
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    state.currentIndex = Math.min(99, state.currentIndex + 1);
+    saveState(state);
+    render(state);
+  });
+  document.getElementById('saveExitBtn').addEventListener('click', () => {
+    saveState(state);
+    window.location.href = './index.html';
+  });
+  document.getElementById('submitBtn').addEventListener('click', () => {
+    if(confirm('確定要交卷嗎？')) submit(state);
+  });
+
+  render(state);
 })();
 </script>
-
 </body>
 </html>
